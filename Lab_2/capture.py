@@ -1,33 +1,39 @@
 from ugradio.pico import capture_data as cpd
 import numpy as np
 import matplotlib.pyplot as plt
-from abseil import app, flags
 from ugradio import timing
 import pickle
+import argparse
 
 
-FLAGS = flags.FLAGS
-flags.DEFINE_string('volt_range', '1V', 'volt range of pico sampler')
-flags.DEFINE_string('file_name', 'arr', 'File to save the data too ')
-flags.DEFINE_boolean('dual_mode', True, 'to take real and complex data')
-flags.DEFINE_integer('divisor', 1, 'divisor for the sampling frequency')
-flags.DEFINE_string('path', '/Users/maxlee1993/Documents/Lab_2/, directory to save the data')
-flags.DEFINE_integer('n_blocks', 1, 'number of blocks to use')
+
+def main():
+    
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('--volt_range',metavar='volt_range', type=str, default='1V',help='volt range of pico sampler')
+    parser.add_argument('--file_name', metavar='file_name', type=str, default='arr',help= 'File to save the data too ')
+    parser.add_argument('--dual_mode',metavar='dual_mode', type=bool, default= False, help='to take real and complex data')
+    parser.add_argument('--divisor', metavar='divisor', type=int,default=1, help='divisor for the sampling frequency')
+    parser.add_argument('--path',metavar='path', type=str, default='/Users/maxlee1993/Documents/Lab_2/',help=' directory to save the data')
+    parser.add_argument('--nblocks',metavar='nblocks', type=int, default=1, help='number of blocks to use')
+    args=parser.parse_args()
+
+    meta_dict_initial : {'local_now' : ugradio.timing.local_time(), 'ut_now' : ugradio.timing.unix_time(), 'julian_now' : ugradio.timing.julian_date() ,'lst_now' : ugradio.timing.lst()}
+    cap = cpd(divisor=args.divisor, volt_range=args.volt_range, dual_mode=args.dual_mode, nblocks=args.nblocks)
+   
 
 
-def main(argv):
-    del argv
-    cap = cpd(divisor=FLAGS.divisor, volt_range=FLAGS.volt_range, dual_mode=FLAGS.dual_mode, n_blocks=FLAGS.n_blocks)
+    meta_dict_final : {'local_now' : ugradio.timing.local_time(), 'ut_now' : ugradio.timing.unix_time(), 'julian_now' : ugradio.timing.julian_date() ,'lst_now' : ugradio.timing.lst()}
     #Remove first 200 samples of each data capture
-    cap_list = [cap[200+16000*N:16000*(N+1)] for N in range(0, FLAGS.n_bocks) ]
+    cap_list = [cap[200+16000*N:16000*(N+1)] for N in range(0, args.nblocks) ]
 
 
-    meta_dict = dict('local_now' = ugradio.timing.local_time(), 'ut_now' = ugradio.timing.unix_time(), 'julian_now' = ugradio.timing.julian_date() ,'lst_now' = ugradio.timing.lst(), 'lst_julian' = ugradio.timing.lst(jd), 'ut_julian' = ugradio.timing.unix_time(jd), 'julian_ut' = ugradio.timing.julian_date(ut))
+
 
 
     #plot out a histogram of one of the blocks,
     plt.figure()
-    plt.hist(cap_list[0], bins=1000)
+    plt.hist(cap_list[0], bins=100)
     plt.show()
 
 
@@ -35,22 +41,26 @@ def main(argv):
     while save == False:
         save_opt = input('Do you want to save? (y/n): ')
         if save_opt =='y':
-            outfile = open(path+file_name, 'wb')
+            outfile = open(args.path+args.file_name, 'wb')
             pickle.dump(cap_list,outfile)
             outfile.close()
 
-            outfile = open(path+file_name+'_meta_dict', 'wb')
-            pickle.dump(meta_dict,outfile)
+            outfile = open(args.path+args.file_name+'_meta_dict_initial', 'wb')
+            pickle.dump(meta_dict_initial,outfile)
             outfile.close()
-            print('done saving to: '+path+file_name)
+
+
+            outfile = open(args.path+args.file_name+'_meta_dict_final', 'wb')
+            pickle.dump(meta_dict_final,outfile)
+            outfile.close()
+            print('done saving to: '+args.path+args.file_name)
             save =True
-        elif:
-            save_opt=='n':
+        elif save_opt=='n':
                 return -1
         else:
             print('choose y or n')
 
 
 if __name__ == '__main__':
-    app.run(main)
+    main()
 
