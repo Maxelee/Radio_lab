@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 from ugradio import nch
-from rotation import altaz
+from rotation import rotate_coords
 
 def get_times():
     return  {'local_now' : timing.local_time(),
@@ -18,46 +18,52 @@ def organize_caps(cap, args):
     cap = {'real': cap_list_real, 'imaginary':cap_list_image}
 
     return cap
+def set_save(save_file, data):
 
-def save(args, cap, t0, tf, ra,dec, alt,az):
+    outfile = open(save_file, 'wb')
+    pickle.dump(data,outfile)
+    outfile.close()
+    print('done saving to: ', save_file)
+
+def get_pos(args, t0):
+    if args.ra or args.alt or args.lat:
+
+        if args.ra is not None  and args.dec is not None:
+            alt, az = rotate_coords('ra dec->alt az', args.ra, args.dec, t0['lst_now'], nch.lat)
+            lat, longitude = rotate_coords('ra dec->lat long', args.ra, args.dec, t0['lst_now'], nch.lat)
+            ra, dec = args.ra, args.dec
+        elif args.alt is not None and args.az is not None:
+            ra, dec = rotate_coords('alt az->ra dec', args.alt, args.az, t0['lst_now'], nch.lat)
+            lat, longitude = rotate_coords('alt az->lat long', args.alt, args.az, t0['lst_now'], nch.lat)
+            alt, az = args.alt, args.az
+        elif args.lat is not None and args.longitude is not None:
+            ra, dec = rotate_coords('lat long->ra dec', args.lat, args.longitude, t0['lst_now'], nch.lat)
+            alt, az = rotate_coords('lat long->alt az', args.lat, args.longitude, t0['lst_now'], nch.lat)
+            lat, longitude = args.lat, args.longitude
+        else:
+            raise ValueError('Missing either an ALT AZ RA or DEC')
+
+        return {'ra':ra, 'dec':dec, 'alt':alt, 'az':az, 'lat':lat, 'long':longitude}
+    else:
+        return
+
+def save(args, cap, t0, tf):
     file_ending = str(t0['julian_now']).split('.')[0]+'_'+ str(t0['julian_now']).split('.')[1]
     save = False
     times = {'initial':t0, 'final':tf}
+    coords = get_pos(args, t0)
     while save == False:
         save_opt = input('Do you want to save? (y/n): ')
         if save_opt =='y':
             tag = str(input('Add tag? (add tag here or enter n to for no tag): '))
             if tag !='n':
                 file_ending = file_ending+'_'+tag
-
-            outfile = open(args.path+'captures/cap_'+file_ending, 'wb')
-            pickle.dump(cap,outfile)
-            outfile.close()
-            print('done saving captures to: '+args.path+'captures/cap_'+file_ending)
-
-            outfile = open(args.path+'/times/time_'+file_ending, 'wb')
-            pickle.dump(times,outfile)
-            outfile.close()
-            print('done saving times to: '+args.path+'/times/time_'+file_ending)
-
-            outfile = open(args.path+'args/arg_'+file_ending, 'wb')
-            pickle.dump(args,outfile)
-            outfile.close()
-            print('done saving args to: '+args.path+'args/arg_'+file_ending)
-
-            if ra or alt:
-                if ra is not None  and dec is not None:
-                    alt, az = altaz(ra, dec, t0['lst_now'], nch.lat)
-                elif alt is not None and az is not None:
-                    dec, ra = altaz(alt, az, t0['lst_now'], nch.lat, inverse=True)
-                else:
-                    raise ValueError('Missing either an ALT AZ RA or DEC')
-                coords = {'ra':ra, 'dec':dec, 'alt':alt, 'az':az}
-                outfile=open(args.path+'coordinates/coord_'+file_ending, 'wb')
-                pickle.dump(coords, outfile)
-                print('done saving coords to: '+args.path+'args/arg__'+file_ending)
-
-            save =True
+            set_save(args.path+'captures/cap_'+file_ending, cap)
+            set_save(args.path+'/times/time_'+file_ending, times)
+            set_save(args.path+'args/arg_'+file_ending, args)
+            if coords is not None:
+                set_save(args.path+'coordinates/coord_'+file_ending, coords)
+            save = True
         elif save_opt=='n':
                 return -1
         else:

@@ -13,6 +13,8 @@ parser.add_argument('--ra', metavar='ra', type=str, default=None, help='right as
 parser.add_argument('--dec', metavar='dec', type=str, default=None, help='declination string in d:m:s')
 parser.add_argument('--alt', metavar='alt', type=float, default=None, help='altitude in degrees')
 parser.add_argument('--az', metavar='az', type=float, default=None, help='azimuth in degrees')
+parser.add_argument('--lat', metavar='lat', type=float, default=None, help='latitude in degrees')
+parser.add_argument('--long', metavar='long', type=float, default=None, help='longitude in degrees')
 args=parser.parse_args()
 
 def main():
@@ -29,7 +31,7 @@ def main():
     test_hist(cap)
 
     #Save data
-    save(args, cap, t0, tf, args.ra, args.dec, args.alt, args.az)
+    save(args, cap, t0, tf)
 if __name__ == '__main__':
     main()
 
