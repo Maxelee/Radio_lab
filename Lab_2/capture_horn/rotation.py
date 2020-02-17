@@ -31,9 +31,9 @@ def convert_dec(dec):
 
 def get_spherical_coord(coord_1, coord_2):
     return np.array([
-        np.cos(coord_1)*np.sin(coord_2),
-        np.sin(coord_1)*np.sin(coord_2),
-        np.cos(coord_2)])
+        np.cos(coord_2)*np.cos(coord_1),
+        np.sin(coord_2)*np.cos(coord_1),
+        np.sin(coord_2)])
 
 def swap_y():
     return np.array([
@@ -119,7 +119,7 @@ def rotate_coords(transform_type, coord_1, coord_2, lst, lat):
             ra = convert_ra(coord_1)
             dec = convert_dec(coord_2)
 
-        ra_dec_vec = get_spherical_coord(dec, ra)
+        ra_dec_vec = get_spherical_coord(ra, dec)
         rotation_2 = hadec_altaz(lat, inverse=False)
         rotation_1 = radec_hadec(lst, inverse=False)
         converted_vec =  np.dot(rotation_2,np.dot(rotation_1,ra_dec_vec))
@@ -137,28 +137,28 @@ def rotate_coords(transform_type, coord_1, coord_2, lst, lat):
         converted_vec =  np.dot(rotation_1, ra_dec_vec)
 
     elif transform_type == 'lat long->ra dec':
-        lat_long_vec = get_spherical_coords(coord_1, coord_2)
+        lat_long_vec = get_spherical_coord(coord_1, coord_2)
         rotation_1 = radec_latlong(lst, inverse=True)
         converted_vec = np.dot(rotation_1, lat_long_vec)
     elif transform_type == 'lat long->alt az':
-        lat_long_vec = get_spherical_coords(coord_1, coord_2)
+        lat_long_vec = get_spherical_coord(coord_1, coord_2)
         rotation_1 = radec_latlong(lst, inverse=True)
         rotation_2 = radec_hadec(lst, inverse=False)
         rotation_3 = hadec_altaz(lat, inverse=False)
         converted_vec = np.dot(rotation_3, np.dot(rotation_2, np.dot(rotation_1, lat_long_vec)))
 
     elif transform_type == 'alt az->lat long':
-        alt_az_vec = get_spherical_coords(coord_2, coord_1)
+        alt_az_vec = get_spherical_coord(coord_2, coord_1)
         rotation_3 = radec_latlong(lst, inverse=False)
         rotation_2 = radec_hadec(lst, inverse=True)
         rotation_1 = hadec_altaz(lat, inverse=True)
-        converted_vec = np.dot(rotation_3, np.dot(rotation_2, np.dot(rotation_1, lat_long_vec)))
+        converted_vec = np.dot(rotation_3, np.dot(rotation_2, np.dot(rotation_1, alt_az_vec)))
 
     else:
         raise ValueError('Transformation options are only: alt az->ra dec, ra dec->alt az,ra dec->lat long,lat long->ra dec, alt az->lat long, lat long->alt az')
 
-    new_coord_1 = np.arcsin(converted_vec[2])
-    new_coord_2 = np.arctan2(converted_vec[0], converted_vec[1])
+    new_coord_1 = np.arcsin(converted_vec[2])%(np.pi/2)                        ######Alt, dec,lat. NOTE arcisn limits values to -pi/2 to pi/2
+    new_coord_2 = np.arctan2(converted_vec[1], converted_vec[0])%(2*np.pi)     ######Az , ra, long, again might have to remove 2pi radian off as a check
 
     return new_coord_1*180/np.pi, new_coord_2*180/np.pi
 

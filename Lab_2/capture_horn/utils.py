@@ -29,16 +29,16 @@ def get_pos(args, t0):
     if args.ra is not None or args.alt is not None or args.lat is not None:
 
         if args.ra is not None  and args.dec is not None:
-            alt, az = rotate_coords('ra dec->alt az', args.ra, args.dec, t0['lst_now'], args.lat_loc)
+            az, alt = rotate_coords('ra dec->alt az', args.ra, args.dec, t0['lst_now'], args.lat_loc)
             lat, longitude = rotate_coords('ra dec->lat long', args.ra, args.dec, t0['lst_now'], args.lat_loc)
-            ra, dec = args.ra, args.dec
+            dec, ra = args.ra, args.dec
         elif args.alt is not None and args.az is not None:
-            ra, dec = rotate_coords('alt az->ra dec', args.alt, args.az, t0['lst_now'], args.lat_loc)
+            dec, ra = rotate_coords('alt az->ra dec', args.alt, args.az, t0['lst_now'], args.lat_loc)
             lat, longitude = rotate_coords('alt az->lat long', args.alt, args.az, t0['lst_now'], args.lat_loc)
-            alt, az = args.alt, args.az
+            az, alt = args.alt, args.az
         elif args.lat is not None and args.longitude is not None:
-            ra, dec = rotate_coords('lat long->ra dec', args.lat, args.longitude, t0['lst_now'], args.lat_loc)
-            alt, az = rotate_coords('lat long->alt az', args.lat, args.longitude, t0['lst_now'], args.lat_loc)
+            dec, ra = rotate_coords('lat long->ra dec', args.lat, args.longitude, t0['lst_now'], args.lat_loc)
+            az, alt = rotate_coords('lat long->alt az', args.lat, args.longitude, t0['lst_now'], args.lat_loc)
             lat, longitude = args.lat, args.longitude
         else:
             raise ValueError('Missing either an ALT AZ RA or DEC')
