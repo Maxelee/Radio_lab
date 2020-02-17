@@ -1,76 +1,89 @@
 import numpy as np
+import pdb
 
 def convert_ra(ra):
-    h, m, s = ra.split(':')
-    return (int(h) + int(m)/60+int(s)/3600)*np.pi/12
+    try:
+        sign_ra, value_ra= ra.split('-')
+    except:
+        sign_ra= None
+        value_ra=ra
+    if sign_ra =='':
+        h, m, s = value_ra.split(':')
+        ra = -(int(h)+int(m)/60+int(s)/3600)*np.pi/12
+    else:
+        h, m, s = ra.split(':')
+        ra =  (int(h) + int(m)/60+int(s)/3600)*np.pi/12
+    return ra
 
 def convert_dec(dec):
-    d, m, s = dec.split(':')
-    return int(d)+int(m)/60+int(s)/3600
+    try:
+        sign_dec, value_dec= dec.split('-')
+    except:
+        sign_dec = None
+        value_dec=dec
+    if sign_dec =='':
+        d, m, s = value_dec.split(':')
+        dec =-(int(d)+int(m)/60+int(s)/3600)*np.pi/180
+    else:
+        d, m, s = dec.split(':')
+        dec =  (int(d) + int(m)/60+int(s)/3600)*np.pi/180
+    return dec
 
 def get_spherical_coord(coord_1, coord_2):
-    return np.array([np.cos(coord_1)*np.sin(coord_2), np.sin(coord_1)*np.cos(coord_2), np.sin(coord_2)])
+    return np.array([
+        np.cos(coord_1)*np.sin(coord_2),
+        np.sin(coord_1)*np.sin(coord_2),
+        np.cos(coord_2)])
 
-def HA(R):
-    swap_matrix = np.array([[1,0,0],[0,-1,0],[0,0,1]])
-    return np.einsum('ij, ij->ij', swap_matrix, R)
+def swap_y():
+    return np.array([
+        [1, 0, 0],
+        [0,-1, 0],
+        [0, 0, 1]])
+
 
 def eq_eqc(lst):
-    R =  np.array([[np.cos(lst), np.sin(lst), 0],[-np.sin(lst), np.cos(lst), 0],[0,0,1]])
-    return HA(R)
+    return np.array([
+        [np.cos(lst), np.sin(lst),  0],
+        [-np.sin(lst), np.cos(lst), 0],
+        [0,               0,        1]])
+
 
 def eq_top(lat):
-    return np.array([[-np.sin(lat), 0, np.cos(lat)],[0,-1,0],[np.cos(lat), 0, np.sin(lat)]])
+    return np.array([
+        [-np.sin(lat), 0, np.cos(lat)],
+        [0,           -1,           0],
+        [np.cos(lat), 0, np.sin(lat)]])
 
 def eqc_gal():
-    return np.array([[-.054876, -.873437, -.483835],[.494109, -.444830, .746982],[-.867666, -.198076, .455984]])
+    return np.array([
+        [-.054876, -.873437, -.483835],
+        [.494109,  -.444830,  .746982],
+        [-.867666, -.198076, .455984]])
 
-def altaz_radec(coord_1, coord_2, lst, lat, inverse=False):
+
+def radec_hadec(lst, inverse=False):
+    R_2 = swap_y()
+    R_1 = eq_eqc(lst)
     if not inverse:
-        try:
-            test =coord_1/3
-        except:
-            coord_1 = convert_ra(coord_1)
-
-        try:
-            test =coord_2/3
-        except:
-            coord_2 = convert_dec(coord_2)
-
-    lst *= np.pi/12
-    lat *= np.pi/180
-    if not inverse:
-        # return altitude and azimuth vector
-        return np.dot(np.dot(eq_eqc(lst), eq_top(lat)), get_spherical_coord(coord_1, coord_2))
-
+        return np.dot(R_2, R_1)
     else:
-        alt = coord_1*np.pi/180
-        az  = coord_2*np.pi/180
-        # return right ascension and declination vector
-        return np.dot(np.dot(eq_eqc(lst), eq_top(lat)).T,get_spherical_coord(alt,az) )
+        return np.dot(R_2, R_1).T
 
-def radec_latlong(coord_1, coord_2, lst, lat, inverse=False):
+def hadec_altaz(lat, inverse=False):
+    R = eq_top(lat*np.pi/180)
     if not inverse:
-        try:
-            test =coord_1/3
-        except:
-            coord_1 = convert_ra(coord_1)
-
-        try:
-            test =coord_2/3
-        except:
-            coord_1 = convert_dec(coord_2)
-
-    lst *= np.pi/12
-    lat *= np.pi/180
-    if not inverse:
-        # return lat and long vector
-        return np.dot(np.dot(eqc_gal(), HA(eq_eqc(lst))), get_spherical_coord(coord_1, coord_2))
+        return R
     else:
-        lat = coord_1*np.pi/180
-        longitude= coord_2*np.pi/180
-        # return ra and dec
-        return np.dot(np.dot(eqc_gal(), HA(eq_eqc(lst))).T, get_spherical_coord(lat, longitude))
+        return R.T
+
+def radec_latlong(lst, inverse=False):
+    R_1 = eq_eqc(lst)
+    R_2 = eqc_gal()
+    if not inverse:
+        return np.dot(R_2, R_1)
+    else:
+        return np.dot(R_2, R_1).T
 
 
 
@@ -93,27 +106,60 @@ def rotate_coords(transform_type, coord_1, coord_2, lst, lat):
     """
 
     if transform_type   == 'alt az->ra dec':
-        converted_vec = altaz_radec(coord_1, coord_2, lst, lat, inverse=False)
+        alt_az_vec = get_spherical_coord(coord_2, coord_1)
+        rotation_1 = hadec_altaz(lat, inverse=True)
+        rotation_2 = radec_hadec(lst, inverse=True)
+        converted_vec =  np.dot(rotation_2,np.dot( rotation_1, alt_az_vec))
+
     elif transform_type == 'ra dec->alt az':
-        converted_vec =  altaz_radec(coord_1, coord_2, lst, lat, inverse=True)
+        try:
+            ra = float(coord_1)
+            dec= float(coord_2)
+        except:
+            ra = convert_ra(coord_1)
+            dec = convert_dec(coord_2)
+
+        ra_dec_vec = get_spherical_coord(dec, ra)
+        rotation_2 = hadec_altaz(lat, inverse=False)
+        rotation_1 = radec_hadec(lst, inverse=False)
+        converted_vec =  np.dot(rotation_2,np.dot(rotation_1,ra_dec_vec))
+
     elif transform_type == 'ra dec->lat long':
-        converted_vec =  radec_latlong(coord_1, coord_2, lst, lat, inverse=False)
+        try:
+            ra = float(coord_1)
+            dec= float(coord_2)
+        except:
+            ra = convert_ra(coord_1)
+            dec = convert_dec(coord_2)
+
+        ra_dec_vec = get_spherical_coord(dec, ra)
+        rotation_1 = radec_latlong(lst, inverse=False)
+        converted_vec =  np.dot(rotation_1, ra_dec_vec)
+
     elif transform_type == 'lat long->ra dec':
-        converted_vec =  radec_latlong(coord_1, coord_2, lst, lat, inverse=True)
+        lat_long_vec = get_spherical_coords(coord_1, coord_2)
+        rotation_1 = radec_latlong(lst, inverse=True)
+        converted_vec = np.dot(rotation_1, lat_long_vec)
     elif transform_type == 'lat long->alt az':
-        converted_vec =  radec_latlong(coord_1, coord_2, lst, lat, inverse=True)
-        dec = np.arcsin(converted_vec[-1])
-        ra  = np.arctan2(converted_vec[0], converted_vec[1])
-        converted_vec =  altaz_radec(ra,dec, lst, lat, inverse=True)
+        lat_long_vec = get_spherical_coords(coord_1, coord_2)
+        rotation_1 = radec_latlong(lst, inverse=True)
+        rotation_2 = radec_hadec(lst, inverse=False)
+        rotation_3 = hadec_altaz(lat, inverse=False)
+        converted_vec = np.dot(rotation_3, np.dot(rotation_2, np.dot(rotation_1, lat_long_vec)))
+
     elif transform_type == 'alt az->lat long':
-        converted_vec = altaz_radec(coord_1, coord_2, lst, lat, inverse=False)
-        alt = np.arcsin(converted_vec[-1])
-        az  = np.arctan2(converted_vec[0], converted_vec[1])
-        converted_vec =  radec_latlong(alt,az, lst, lat, inverse=False)
+        alt_az_vec = get_spherical_coords(coord_2, coord_1)
+        rotation_3 = radec_latlong(lst, inverse=False)
+        rotation_2 = radec_hadec(lst, inverse=True)
+        rotation_1 = hadec_altaz(lat, inverse=True)
+        converted_vec = np.dot(rotation_3, np.dot(rotation_2, np.dot(rotation_1, lat_long_vec)))
+
     else:
         raise ValueError('Transformation options are only: alt az->ra dec, ra dec->alt az,ra dec->lat long,lat long->ra dec, alt az->lat long, lat long->alt az')
 
-    coord_1 = np.arcsin(converted_vec[-1])
-    coord_2 = np.arctan2(converted_vec[0], converted_vec[1])
+    new_coord_1 = np.arcsin(converted_vec[2])
+    new_coord_2 = np.arctan2(converted_vec[0], converted_vec[1])
 
-    return coord_1, coord_2
+    return new_coord_1*180/np.pi, new_coord_2*180/np.pi
+
+

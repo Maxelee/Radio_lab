@@ -15,6 +15,7 @@ parser.add_argument('--alt', metavar='alt', type=float, default=None, help='alti
 parser.add_argument('--az', metavar='az', type=float, default=None, help='azimuth in degrees')
 parser.add_argument('--lat', metavar='lat', type=float, default=None, help='latitude in degrees')
 parser.add_argument('--long', metavar='long', type=float, default=None, help='longitude in degrees')
+parser.add_argument('--lat_loc', metavar='lat_loc', type=float, default=37.873199, help='latitude in degrees of observation')
 args=parser.parse_args()
 
 def main():
