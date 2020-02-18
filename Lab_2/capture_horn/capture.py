@@ -31,6 +31,7 @@ def main():
     #test with a histogram
     test_hist(cap)
 
+
     #Save data
     save(args, cap, t0, tf)
 if __name__ == '__main__':
