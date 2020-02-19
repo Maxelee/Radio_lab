@@ -2,7 +2,7 @@ from ugradio.pico import capture_data as cpd
 import numpy as np
 import argparse
 from utils import *
-
+import time
 parser = argparse.ArgumentParser(description='Capture bighirn data.')
 
 parser.add_argument('--volt_range',metavar='volt_range', type=str, default='1V',help='volt range of pico sampler')
@@ -22,7 +22,10 @@ def main():
 
     t0 = get_times()
     #Capture the data
+    start = time.time()
     cap = cpd(divisor=args.divisor, volt_range=args.volt_range, nblocks=args.nblocks, dual_mode=True)
+    end = time.time()
+    print(end-start)
     tf = get_times()
 
     #Organize real and complex components

@@ -8,11 +8,12 @@ from power import plot_power
 
 
 def convert_to_voltage(args):
-    if len(a.split('m'))!=2:
-        a= a.split('V')*1000
+    volt_range = args.volt_range
+    if len(volt_range.split('m'))!=2:
+        factor= float(volt_rage.split('V')[0]*1000)
     else:
-        a= a.split('m')
-    return a/1023
+        factor= float(volt_range.split('m')[0])
+    return factor/1023
 
 
 def get_times():
