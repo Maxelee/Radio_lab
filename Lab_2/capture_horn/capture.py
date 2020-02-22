@@ -16,16 +16,22 @@ parser.add_argument('--az', metavar='az', type=float, default=None, help='azimut
 parser.add_argument('--lat', metavar='lat', type=float, default=None, help='latitude in degrees')
 parser.add_argument('--long', metavar='long', type=float, default=None, help='longitude in degrees')
 parser.add_argument('--lat_loc', metavar='lat_loc', type=float, default=37.873199, help='latitude in degrees of observation')
+parser.add_argument('--iterations', metavar='iterations', type=int, default=None, help='whether to iterate over multiple captures')
 args=parser.parse_args()
 
 def main():
 
     t0 = get_times()
     #Capture the data
-    start = time.time()
-    cap = cpd(divisor=args.divisor, volt_range=args.volt_range, nblocks=args.nblocks, dual_mode=True)
-    end = time.time()
-    print(end-start)
+    if args.iterations is None:
+        cap = cpd(divisor=args.divisor, volt_range=args.volt_range, nblocks=args.nblocks, dual_mode=True)
+
+    else:
+        cap=np.array([])
+        for i in range(args.iterations):
+            cap = np.hstack((cap, cpd(divisor=args.divisor, volt_range=args.volt_range, nblocks=args.nblocks, dual_mode=True)))
+            print('completed {} captures'.format(i+1))
+
     tf = get_times()
 
     #Organize real and complex components
@@ -37,6 +43,8 @@ def main():
 
     #Save data
     save(args, cap, t0, tf)
+
+
 if __name__ == '__main__':
     main()
 

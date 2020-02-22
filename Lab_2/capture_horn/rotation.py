@@ -35,12 +35,6 @@ def get_spherical_coord(coord_1, coord_2):
         np.sin(coord_2)*np.cos(coord_1),
         np.sin(coord_2)])
 
-def swap_y():
-    return np.array([
-        [1, 0, 0],
-        [0,-1, 0],
-        [0, 0, 1]])
-
 
 def eq_eqc(lst):
     return np.array([
@@ -63,12 +57,11 @@ def eqc_gal():
 
 
 def radec_hadec(lst, inverse=False):
-    R_2 = swap_y()
     R_1 = eq_eqc(lst)
     if not inverse:
-        return np.dot(R_2, R_1)
+        return R_1
     else:
-        return np.dot(R_2, R_1).T
+        return R_1.T
 
 def hadec_altaz(lat, inverse=False):
     R = eq_top(lat*np.pi/180)
@@ -78,12 +71,11 @@ def hadec_altaz(lat, inverse=False):
         return R.T
 
 def radec_latlong(lst, inverse=False):
-    R_1 = eq_eqc(lst)
-    R_2 = eqc_gal()
+    R_1 = eqc_gal()
     if not inverse:
-        return np.dot(R_2, R_1)
+        return  R_1
     else:
-        return np.dot(R_2, R_1).T
+        return R_2.T
 
 
 
