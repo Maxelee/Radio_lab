@@ -6,7 +6,6 @@ from ugradio import nch
 from rotation import rotate_coords
 from power import plot_power
 import os
-from average import power_mean
 def convert_to_voltage(args):
     volt_range = args.volt_range
     if len(volt_range.split('m'))!=2:
@@ -29,7 +28,7 @@ def organize_caps(cap, args):
 
     """
     # Find conversion from bits to mV
-    conversion_factor = convert_to_voltage(args)
+    #conversion_factor = convert_to_voltage(args)
 
     #Remove first 200 samples of each data capture and organize into real and complex
     if args.iterations is None:
@@ -39,8 +38,10 @@ def organize_caps(cap, args):
         sample_len = args.nblocks*args.iterations
 
     #Drop the first 200 samples and seperate real from imaginary components
-    cap_list_real  = [cap[200+16000*2*N:16000*(2*N+1)]*conversion_factor for N in range(sample_len)]
-    cap_list_image = [cap[200+16000*(2*N+1):16000*2*(N+1)]*conversion_factor for N in range(sample_len)]
+    #cap_list_real  = [cap[200+16000*2*N:16000*(2*N+1)] for N in range(sample_len)]
+    #cap_list_image = [cap[200+16000*(2*N+1):16000*2*(N+1)] for N in range(sample_len)]
+    cap = cap.reshape(sample_len, 2, 16000)
+
 
     return {'real': cap_list_real, 'imaginary':cap_list_image}
 
@@ -122,7 +123,7 @@ def save(args, cap, t0, tf):
             set_save(args.path+'captures/' + folder +  '/cap_'  +   file_ending, cap)
             set_save(args.path+'times/'    + folder +  '/time_'  +  file_ending, times)
             set_save(args.path+'args/'     + folder +  '/arg_'   +  file_ending, args)
-            set_save(args.path+'power/'    + folder +  '/power_'   +  file_ending, args)
+            set_save(args.path+'power/'    + folder +  '/power_'   +  file_ending, power)
 
             if coords is not None:
                 set_save(args.path+'coordinates/' + folder + '/coord_'+file_ending, coords)
