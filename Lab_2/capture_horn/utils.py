@@ -5,8 +5,7 @@ import pickle
 from ugradio import nch
 from rotation import rotate_coords
 from power import plot_power
-
-
+import os
 def convert_to_voltage(args):
     volt_range = args.volt_range
     if len(volt_range.split('m'))!=2:
@@ -17,9 +16,9 @@ def convert_to_voltage(args):
 
 
 def get_times():
-    return  {'local_now' : timing.local_time(),
-            'ut_now' : timing.unix_time(), 'julian_now' : timing.julian_date()
-            ,'lst_now' : timing.lst()}
+    return  {'local' : timing.local_time(),
+            'ut' : timing.unix_time(), 'julian' : timing.julian_date()
+            ,'lst' : timing.lst()}
 
 def organize_caps(cap, args):
     """
@@ -29,11 +28,20 @@ def organize_caps(cap, args):
 
     """
     # Find conversion from bits to mV
-    conversion_factor = convert_to_voltage(args)
+    #conversion_factor = convert_to_voltage(args)
 
     #Remove first 200 samples of each data capture and organize into real and complex
-    cap_list_real  = [cap[200+16000*2*N:16000*(2*N+1)]*conversion_factor for N in range(0, args.nblocks)]
-    cap_list_image = [cap[200+16000*(2*N+1):16000*2*(N+1)]*conversion_factor for N in range(0, args.nblocks)]
+    if args.iterations is None:
+        sample_len = args.nblocks
+
+    else:
+        sample_len = args.nblocks*args.iterations
+
+    #Drop the first 200 samples and seperate real from imaginary components
+    #cap_list_real  = [cap[200+16000*2*N:16000*(2*N+1)] for N in range(sample_len)]
+    #cap_list_image = [cap[200+16000*(2*N+1):16000*2*(N+1)] for N in range(sample_len)]
+    cap = cap.reshape(sample_len, 2, 16000)
+
 
     return {'real': cap_list_real, 'imaginary':cap_list_image}
 
@@ -54,18 +62,18 @@ def get_pos(args, t0):
     if args.ra is not None or args.alt is not None or args.lat is not None:
 
         if args.ra is not None  and args.dec is not None:
-            az, alt = rotate_coords('ra dec->alt az', args.ra, args.dec, t0['lst_now'], args.lat_loc)
-            lat, longitude = rotate_coords('ra dec->lat long', args.ra, args.dec, t0['lst_now'], args.lat_loc)
+            az, alt = rotate_coords('ra dec->alt az', args.ra, args.dec, t0['lst'], args.lat_loc)
+            lat, longitude = rotate_coords('ra dec->lat long', args.ra, args.dec, t0['lst'], args.lat_loc)
             dec, ra = args.ra, args.dec
 
         elif args.alt is not None and args.az is not None:
-            dec, ra = rotate_coords('alt az->ra dec', args.alt, args.az, t0['lst_now'], args.lat_loc)
-            lat, longitude = rotate_coords('alt az->lat long', args.alt, args.az, t0['lst_now'], args.lat_loc)
+            dec, ra = rotate_coords('alt az->ra dec', args.alt, args.az, t0['lst'], args.lat_loc)
+            lat, longitude = rotate_coords('alt az->lat long', args.alt, args.az, t0['lst'], args.lat_loc)
             az, alt = args.alt, args.az
 
         elif args.lat is not None and args.longitude is not None:
-            dec, ra = rotate_coords('lat long->ra dec', args.lat, args.longitude, t0['lst_now'], args.lat_loc)
-            az, alt = rotate_coords('lat long->alt az', args.lat, args.longitude, t0['lst_now'], args.lat_loc)
+            dec, ra = rotate_coords('lat long->ra dec', args.lat, args.longitude, t0['lst'], args.lat_loc)
+            az, alt = rotate_coords('lat long->alt az', args.lat, args.longitude, t0['lst'], args.lat_loc)
             lat, longitude = args.lat, args.longitude
 
         else:
@@ -78,8 +86,8 @@ def get_pos(args, t0):
         return
 
 def save(args, cap, t0, tf):
-    # Generate file ending with JD naming convention
-    file_ending = str(t0['julian_now']).split('.')[0]+'_'+ str(t0['julian_now']).split('.')[1]
+    # Generate file ending and folder with JD naming convention
+    folder, file_ending = str(tf['julian']).split('.')[0], str(round(tf['lst'], 2)).split('.')[0]+'-'+str(round(tf['lst'], 2)).split('.')[1]
     save = False
 
     # Put the initial and final times into a dictionary
@@ -89,24 +97,36 @@ def save(args, cap, t0, tf):
     coords_0 = get_pos(args, t0)
     coords_f = get_pos(args, tf)
     coords = {'initial': coords_0, 'final':coords_f}
+    caps_arr = np.asarray(cap['real'])+1.0j*np.asarray(cap['imaginary'])
+    power  = power_mean(args,caps_arr)
 
     # Ask if user wants to save the run, if they want a special tag for it and plot the power spectrum
-    while save == False:
-        save_opt = input('Do you want to save? (y/n): ')
+    while not save:
+        save_opt = input('do you want to save? (y/n): ')
 
+        #Add a special tag to the data capturing
         if save_opt =='y':
-            tag = str(input('Add tag? (add tag here or enter n to for no tag): '))
+            tag = input('do you want to enter a tag? (n for none): ')
 
             if tag !='n':
                 file_ending = file_ending+'_'+tag
 
-            plot_power(args.path+'/power_plots/plot_'+file_ending, 15800, 62.5e6/args.divisor, cap['real'][0], cap['imaginary'][0])
-            set_save(args.path+'captures/cap_'+file_ending, cap)
-            set_save(args.path+'/times/time_'+file_ending, times)
-            set_save(args.path+'args/arg_'+file_ending, args)
+            try:
+                os.mkdir(args.path +  'captures/'    +  folder)
+                os.mkdir(args.path +  'times/'       +  folder)
+                os.mkdir(args.path +  'args/'        +  folder)
+                os.mkdir(args.path +  'coordinates/' +  folder)
+                os.mkdir(args.path +  'power/'       +  folder)
+            except FileExistsError:
+                print('folders for today already exist')
+
+            set_save(args.path+'captures/' + folder +  '/cap_'  +   file_ending, cap)
+            set_save(args.path+'times/'    + folder +  '/time_'  +  file_ending, times)
+            set_save(args.path+'args/'     + folder +  '/arg_'   +  file_ending, args)
+            set_save(args.path+'power/'    + folder +  '/power_'   +  file_ending, power)
 
             if coords is not None:
-                set_save(args.path+'coordinates/coord_'+file_ending, coords)
+                set_save(args.path+'coordinates/' + folder + '/coord_'+file_ending, coords)
 
             save = True
 
