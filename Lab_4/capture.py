@@ -1,16 +1,14 @@
 import numpy as np
 import sys
 import os
-
-
+from astropy.coordinates import SkyCoord, EarthLocation, AltAz
+import astropy.time
+from astropy import units as u
 import argparse
-from utils import get_pos, get_times
+from ugradio import leusch, timing, agilent
 import time
+
 parser = argparse.ArgumentParser(description='generate observing grid.')
-parser.add_argument('--ls', nargs='+', type=float, required=True, help='galactic latitude min and max in degrees')
-parser.add_argument('--bs', nargs='+', type=float, required=True, help='Galactic longitude min and max in degrees')
-parser.add_argument('--l_resolution', type=int, required=True, help='Latitude resolution in degrees')
-parser.add_argument('--b_resolution', type=int, required=True, help='Longitude resolution in degrees')
 parser.add_argument('--time', metavar='--time',type=int, help='desired total observation time at each coord', default=1)
 parser.add_argument('--path', metavar='--path', type=str, help='path to save to', default='/home/radiolab/boyx')
 parser.add_argument('--noise', metavar='--noise',type=str, help='noise on or off', default='off')
@@ -50,7 +48,7 @@ def make_grid(args):
     pointings_lb = np.array([coord for coord in g_lb])
     return pointings, pointings_lb
 
-def point():
+def main():
     JD = timing.julian_date()
     spec = leusch.Spectrometer()
     noise = leusch.LeuschNoise()
