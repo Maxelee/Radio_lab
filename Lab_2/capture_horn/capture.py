@@ -1,7 +1,7 @@
 from ugradio.pico import capture_data as cpd
 import numpy as np
 import argparse
-from utils import get_pos, get_times
+from utils import get_pos, get_times,save
 import time
 parser = argparse.ArgumentParser(description='Capture bighirn data.')
 
@@ -48,7 +48,7 @@ def main():
     # Compute coordintes before and after data capture, store in dict
     coords_0 = get_pos(args, t0)
     coords_f = get_pos(args, tf)
-    np.savez(args.path+'captures/' + args.file_name , real=cap[0], image=cap[1], t0=t0, tf=tf, coords_0=coords_0, coords_f=coords_f)
+    np.savez(args.path + '\captures' + args.file_name , real=cap[0], image=cap[1], t0=t0, tf=tf, coords_0=coords_0, coords_f=coords_f)
     #Save data
     #save(args, cap, t0, tf)
 
